@@ -1,7 +1,6 @@
 package pidgeon
 
 import "core:container/queue"
-import "core:fmt"
 
 Message :: struct($T: typeid, $D: typeid) {
 	type: T,
@@ -76,5 +75,6 @@ destroy :: proc(using self: ^Broker($T, $D)) {
 		delete(listeners[message_type])
 	}
 	delete(listeners)
+	queue.destroy(&messages)
 	free(self)
 }
