@@ -4,8 +4,6 @@ import "base:runtime"
 import "core:container/queue"
 import "core:fmt"
 
-PIDGEON_ALLOW_UNPROCESSED_MESSAGES :: #config(PIDGEON_ALLOW_UNPROCESSED_MESSAGES, false)
-
 Message :: struct($T: typeid, $D: typeid) {
 	type: T,
 	data: D,
@@ -72,22 +70,11 @@ process_messages :: proc(using self: ^Broker($T, $D)) {
 
 		for l in message_listeners {
 			processed := l.on_message(l.listener, message.type, message.data)
-			when PIDGEON_ALLOW_UNPROCESSED_MESSAGES {
-				if !processed {
-					fmt.printfln(
-						"WARN: Pidgeon: Listener (%s) has not processed registered message: %v",
-						l.loc,
-						message.type,
-					)
-				}
-			} else {
-				assert(
-					processed,
-					fmt.tprintf(
-						"Pidgeon: Listener (%s) has not processed registered message: %v",
-						l.loc,
-						message.type,
-					),
+			if !processed {
+				fmt.printfln(
+					"WARN: Pidgeon: Listener (%s) has not processed registered message: %v",
+					l.loc,
+					message.type,
 				)
 			}
 		}

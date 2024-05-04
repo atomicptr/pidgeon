@@ -102,8 +102,6 @@ ui_on_message :: proc(receiver: rawptr, message: Message, data: MessageData) -> 
 
 And that is how you use pidgeon.
 
-**NOTE**: Pidgeon does not allow you to define listeners for messages that are not processed by default, you can enable this functionality by adding a command line define named: ``PIDGEON_ALLOW_UNPROCESSED_MESSAGES``
-
 ## License
 
 MIT
