@@ -1,6 +1,10 @@
 package pidgeon
 
+import "base:runtime"
 import "core:container/queue"
+import "core:fmt"
+
+PIDGEON_ALLOW_UNPROCESSED_MESSAGES :: #config(PIDGEON_ALLOW_UNPROCESSED_MESSAGES, false)
 
 Message :: struct($T: typeid, $D: typeid) {
 	type: T,
@@ -9,7 +13,8 @@ Message :: struct($T: typeid, $D: typeid) {
 
 Listener :: struct($T: typeid, $D: typeid) {
 	listener:   rawptr,
-	on_message: proc(listener: rawptr, type: T, data: D),
+	on_message: proc(listener: rawptr, type: T, data: D) -> bool,
+	loc:        runtime.Source_Code_Location,
 }
 
 Broker :: struct($T: typeid, $D: typeid) {
@@ -26,11 +31,16 @@ register :: proc(
 	using self: ^Broker($T, $D),
 	type: T,
 	who: rawptr,
-	listener_func: proc(listener: rawptr, type: T, data: D),
+	listener_func: proc(listener: rawptr, type: T, data: D) -> bool,
+	loc := #caller_location,
 ) {
 	l := listeners[type]
-	append(&l, Listener(T, D){who, listener_func})
+	append(&l, Listener(T, D){who, listener_func, loc})
 	listeners[type] = l
+
+	when ODIN_DEBUG {
+		fmt.printfln("DEBUG: Pidgeon: Registered message listener for '%v' at %s", type, loc)
+	}
 }
 
 unregister :: proc(using self: ^Broker($T, $D), who: rawptr) {
@@ -61,13 +71,40 @@ process_messages :: proc(using self: ^Broker($T, $D)) {
 		}
 
 		for l in message_listeners {
-			l.on_message(l.listener, message.type, message.data)
+			processed := l.on_message(l.listener, message.type, message.data)
+			when PIDGEON_ALLOW_UNPROCESSED_MESSAGES {
+				if !processed {
+					fmt.printfln(
+						"WARN: Pidgeon: Listener (%s) has not processed registered message: %v",
+						l.loc,
+						message.type,
+					)
+				}
+			} else {
+				assert(
+					processed,
+					fmt.tprintf(
+						"Pidgeon: Listener (%s) has not processed registered message: %v",
+						l.loc,
+						message.type,
+					),
+				)
+			}
 		}
 	}
 }
 
-post :: proc(using self: ^Broker($T, $D), type: T, data: D) {
+post :: proc(using self: ^Broker($T, $D), type: T, data: D, loc := #caller_location) {
 	queue.push_back(&messages, Message(T, D){type, data})
+
+	when ODIN_DEBUG {
+		fmt.printfln(
+			"DEBUG: Pidgeon: Broker received message '%v' with data '%v' at %s",
+			type,
+			data,
+			loc,
+		)
+	}
 }
 
 destroy :: proc(using self: ^Broker($T, $D)) {

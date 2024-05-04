@@ -78,7 +78,9 @@ ui_create :: proc() {
   pidgeon.register(broker, Message.PlayerManaUpdated, rawptr(self), ui_on_message)
 }
 
-ui_on_message :: proc(receiver: rawptr, message: Message, data: MessageData) {
+// we need to return whetever or not we handled the message, this exists in order to enable certain debug functionality
+// like figuring out which messages are unhandled
+ui_on_message :: proc(receiver: rawptr, message: Message, data: MessageData) -> bool {
   self := cast(^UIManager)receiver
 
   // next we handle the messages we care about
@@ -86,14 +88,21 @@ ui_on_message :: proc(receiver: rawptr, message: Message, data: MessageData) {
   case Message.PlayerHPUpdated:
     value := data.(u16) // we know this can only be u16 here, depending on what you do check this
     ui_set_label(self.hp_label, fmt.cptrintf("HP: %d", value))
+    return true
   case Message.PlayerManaUpdated:
     value := data.(u16)
     ui_set_label(self.mana_label, fmt.cptrintf("Mana: %d", value))
+    return true
   }
+
+  // because we have not handled any messages
+  return false
 }
 ```
 
-And that is how you use pidgeon
+And that is how you use pidgeon.
+
+**NOTE**: Pidgeon does not allow you to define listeners for messages that are not processed by default, you can enable this functionality by adding a command line define named: ``PIDGEON_ALLOW_UNPROCESSED_MESSAGES``
 
 ## License
 
