@@ -66,3 +66,46 @@ test_message_passing_enum_keys_multiple :: proc(t: ^testing.T) {
 	testing.expect_value(t, b_send, 1)
 	testing.expect_value(t, c_send, 0)
 }
+
+@(test)
+test_unhandled_message :: proc(t: ^testing.T) {
+	Key :: enum u8 {
+		A,
+		B,
+	}
+
+	b := create(Key, [Key]^i32)
+	defer destroy(b)
+
+	a_send: i32 = 0
+	b_send: i32 = 0
+
+	func :: proc(receiver: rawptr, msg: Key, data: [Key]^i32) -> bool {
+		switch msg {
+		case .A:
+			data[.A]^ = 1337
+			return true
+		case .B:
+			data[.B]^ = 42 // we forgot: return true here oops
+		}
+
+		return false
+	}
+
+	register(b, Key.A, nil, func)
+	register(b, Key.B, nil, func)
+
+	data := [Key]^i32 {
+		.A = &a_send,
+		.B = &b_send,
+	}
+
+	post(b, Key.A, data)
+	post(b, Key.B, data)
+
+	process_messages(b)
+
+	testing.expect_value(t, a_send, 1337)
+	testing.expect_value(t, b_send, 42)
+}
+

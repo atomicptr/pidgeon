@@ -102,6 +102,10 @@ ui_on_message :: proc(receiver: rawptr, message: Message, data: MessageData) -> 
 
 And that is how you use pidgeon.
 
+## Options
+
+Besides reacting to ODIN_DEBUG being set (-dev flag), pidgeon also has a "strict mode" (-define:PIDGEON_STRICT_MODE=true) which will crash the program if you forgot to handle a registered message (recommended)
+
 ## License
 
 MIT

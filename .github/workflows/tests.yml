@@ -20,4 +20,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Test
         shell: bash
-        run: odin test pidgeon -vet
+        run: |
+          odin test pidgeon -vet -define:ODIN_TEST_THREADS=1 -define:ODIN_TEST_RANDOM_SEED=$(date +%s)
+          # next we test if adding strict mode makes our test fail, which we expect!
+          odin test pidgeon -vet -define:ODIN_TEST_THREADS=1 -define:ODIN_TEST_RANDOM_SEED=$(date +%s) -define:PIDGEON_STRICT_MODE=true && exit 1 || exit 0

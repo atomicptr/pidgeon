@@ -4,6 +4,8 @@ import "base:runtime"
 import "core:container/queue"
 import "core:fmt"
 
+strict_mode :: #config(PIDGEON_STRICT_MODE, false)
+
 Message :: struct($T: typeid, $D: typeid) {
 	type: T,
 	data: D,
@@ -70,12 +72,24 @@ process_messages :: proc(using self: ^Broker($T, $D)) {
 
 		for l in message_listeners {
 			processed := l.on_message(l.listener, message.type, message.data)
-			if !processed {
-				fmt.printfln(
-					"WARN: Pidgeon: Listener (%s) has not processed registered message: %v",
-					l.loc,
-					message.type,
+
+			when strict_mode {
+				assert(
+					processed,
+					fmt.tprintf(
+						"ERROR: Pidgeon: Listener (%s) has not processed registered message: %v",
+						l.loc,
+						message.type,
+					),
 				)
+			} else {
+				if !processed {
+					fmt.printfln(
+						"WARN: Pidgeon: Listener (%s) has not processed registered message: %v",
+						l.loc,
+						message.type,
+					)
+				}
 			}
 		}
 	}
@@ -102,3 +116,4 @@ destroy :: proc(using self: ^Broker($T, $D)) {
 	queue.destroy(&messages)
 	free(self)
 }
+
